@@ -1,15 +1,35 @@
 from flask import Flask, render_template, request, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
+import os
+from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
-import os
+from flask_sqlalchemy import SQLAlchemy
 
+# =========================
+# CONFIG INICIAL
+# =========================
+load_dotenv()
 app = Flask(__name__)
 
 # =========================
-# BASE DE DATOS (SQLite)
+# VERIFICACIÓN (IMPORTANTE)
 # =========================
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tienda.db"
+print("DATABASE_URL:", os.getenv("DATABASE_URL"))
+
+# =========================
+# BASE DE DATOS
+# =========================
+uri = os.getenv("DATABASE_URL")
+
+if uri:
+    if uri.startswith("postgres://"):
+        uri = uri.replace("postgres://", "postgresql://", 1)
+else:
+    uri = "sqlite:///tienda.db"
+
+print("USANDO BD:", uri)  # 🔥 para confirmar qué base usa
+
+app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -25,7 +45,7 @@ class Producto(db.Model):
     imagen = db.Column(db.String(300))
 
 # =========================
-# CLOUDINARY (Render usa variables de entorno)
+# CLOUDINARY
 # =========================
 cloudinary.config(
     cloud_name=os.getenv("CLOUD_NAME"),
@@ -34,13 +54,13 @@ cloudinary.config(
 )
 
 # =========================
-# CREAR BD
+# CREAR TABLAS
 # =========================
 with app.app_context():
     db.create_all()
 
 # =========================
-# RUTA PRINCIPAL (DASHBOARD)
+# DASHBOARD
 # =========================
 @app.route("/")
 def index():
@@ -48,7 +68,7 @@ def index():
     return render_template("index.html", productos=productos)
 
 # =========================
-# AGREGAR PRODUCTO
+# AGREGAR
 # =========================
 @app.route("/agregar", methods=["GET", "POST"])
 def agregar():
@@ -56,11 +76,11 @@ def agregar():
         nombre = request.form["nombre"]
         precio = float(request.form["precio"])
         stock = int(request.form["stock"])
-        foto = request.files["foto"]
 
+        foto = request.files.get("foto")
         url_imagen = ""
 
-        if foto:
+        if foto and foto.filename != "":
             resultado = cloudinary.uploader.upload(foto)
             url_imagen = resultado["secure_url"]
 
@@ -79,7 +99,7 @@ def agregar():
     return render_template("agregar.html")
 
 # =========================
-# EDITAR PRODUCTO
+# EDITAR
 # =========================
 @app.route("/editar/<int:id>", methods=["GET", "POST"])
 def editar(id):
@@ -90,9 +110,9 @@ def editar(id):
         producto.precio = float(request.form["precio"])
         producto.stock = int(request.form["stock"])
 
-        foto = request.files["foto"]
+        foto = request.files.get("foto")
 
-        if foto:
+        if foto and foto.filename != "":
             resultado = cloudinary.uploader.upload(foto)
             producto.imagen = resultado["secure_url"]
 
@@ -102,7 +122,7 @@ def editar(id):
     return render_template("editar.html", producto=producto)
 
 # =========================
-# ELIMINAR PRODUCTO
+# ELIMINAR
 # =========================
 @app.route("/eliminar/<int:id>")
 def eliminar(id):
@@ -115,7 +135,7 @@ def eliminar(id):
     return redirect(url_for("index"))
 
 # =========================
-# EJECUTAR APP
+# RUN
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
