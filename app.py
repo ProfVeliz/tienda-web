@@ -12,15 +12,13 @@ load_dotenv()
 app = Flask(__name__)
 
 # =========================
-# BASE DE DATOS (POSTGRES)
+# BASE DE DATOS
 # =========================
 uri = os.getenv("DATABASE_URL")
 
-# Arreglar compatibilidad Render
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-# Fallback local (por si pruebas en tu PC)
 if not uri:
     uri = "sqlite:///tienda.db"
 
@@ -82,11 +80,11 @@ def agregar():
         nombre = request.form["nombre"]
         precio = float(request.form["precio"])
         stock = int(request.form["stock"])
-        foto = request.files["foto"]
 
+        foto = request.files.get("foto")
         url_imagen = ""
 
-        if foto:
+        if foto and foto.filename != "":
             resultado = cloudinary.uploader.upload(foto)
             url_imagen = resultado["secure_url"]
 
@@ -105,7 +103,7 @@ def agregar():
     return render_template("agregar.html")
 
 # =========================
-# ELIMINAR
+# ELIMINAR PRODUCTO
 # =========================
 @app.route("/eliminar/<int:id>")
 def eliminar(id):
@@ -118,7 +116,7 @@ def eliminar(id):
     return redirect(url_for("index"))
 
 # =========================
-# EDITAR
+# EDITAR PRODUCTO COMPLETO
 # =========================
 @app.route("/editar/<int:id>", methods=["GET", "POST"])
 def editar(id):
@@ -129,9 +127,9 @@ def editar(id):
         producto.precio = float(request.form["precio"])
         producto.stock = int(request.form["stock"])
 
-        foto = request.files["foto"]
+        foto = request.files.get("foto")
 
-        if foto:
+        if foto and foto.filename != "":
             resultado = cloudinary.uploader.upload(foto)
             producto.imagen = resultado["secure_url"]
 
@@ -141,7 +139,20 @@ def editar(id):
     return render_template("editar.html", producto=producto)
 
 # =========================
-# RUN
+# EDITAR SOLO STOCK (RÁPIDO)
+# =========================
+@app.route("/editar_stock/<int:id>", methods=["POST"])
+def editar_stock(id):
+    producto = Producto.query.get(id)
+
+    if producto:
+        producto.stock = int(request.form["stock"])
+        db.session.commit()
+
+    return redirect(url_for("index"))
+
+# =========================
+# RUN APP
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
