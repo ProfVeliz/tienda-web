@@ -1,68 +1,95 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Tienda</title>
+<meta charset="UTF-8">
+<title>Tienda</title>
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-dark text-white">
 
 <div class="d-flex">
 
-    <!-- MENU LATERAL -->
-    <div class="bg-black p-3" style="width: 220px; min-height: 100vh;">
-        <h4>🛒 Tienda</h4>
-        <hr>
+<!-- MENU -->
+<div class="bg-black p-3" style="width: 220px; min-height: 100vh;">
+    <h4>🛒 Tienda</h4>
+    <hr>
 
-        <a href="/" class="d-block text-white mb-2">🏠 Dashboard</a>
-        <a href="/agregar" class="d-block text-white mb-2">➕ Agregar</a>
+    <a href="/" class="d-block text-white mb-2">🏠 Dashboard</a>
+    <a href="/agregar" class="d-block text-white mb-2">➕ Agregar</a>
+</div>
+
+<!-- CONTENIDO -->
+<div class="flex-grow-1 p-4">
+
+<h2>Dashboard</h2>
+
+<!-- RESUMEN -->
+<div class="row mb-4">
+
+    <div class="col-md-4">
+        <div class="card bg-secondary p-3">
+            <h5>Total Productos</h5>
+            <h2>{{ total_productos }}</h2>
+        </div>
     </div>
 
-    <!-- CONTENIDO -->
-    <div class="flex-grow-1 p-4">
-
-        <h2>Dashboard</h2>
-
-        <!-- RESUMEN -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card bg-secondary p-3">
-                    <h5>Total Artículos</h5>
-                    <h2>{{ productos|length }}</h2>
-                </div>
-            </div>
+    <div class="col-md-4">
+        <div class="card bg-secondary p-3">
+            <h5>Stock Bajo</h5>
+            <h2>{{ stock_bajo }}</h2>
         </div>
-
-        <!-- LISTA DE PRODUCTOS -->
-        <div class="row">
-
-            {% for p in productos %}
-            <div class="col-md-3">
-                <div class="card bg-secondary text-white mb-4">
-
-                    {% if p.imagen %}
-                    <img src="{{ p.imagen }}" class="card-img-top" style="height:200px; object-fit:cover;">
-                    {% else %}
-                    <img src="https://via.placeholder.com/200" class="card-img-top">
-                    {% endif %}
-
-                    <div class="card-body">
-                        <h5>{{ p.nombre }}</h5>
-                        <p>💰 Q{{ p.precio }}</p>
-                        <p>📦 Stock: {{ p.stock }}</p>
-                    </div>
-
-                </div>
-            </div>
-            {% endfor %}
-
-        </div>
-
     </div>
 
+    <div class="col-md-4">
+        <div class="card bg-secondary p-3">
+            <h5>Valor Total</h5>
+            <h2>Q{{ total_valor }}</h2>
+        </div>
+    </div>
+
+</div>
+
+<!-- PRODUCTOS -->
+<div class="row">
+
+{% for p in productos %}
+<div class="col-md-3">
+<div class="card bg-secondary text-white mb-4">
+
+    {% if p.imagen %}
+    <img src="{{ p.imagen }}" style="height:200px; object-fit:cover;">
+    {% else %}
+    <img src="https://via.placeholder.com/200">
+    {% endif %}
+
+    <div class="card-body">
+        <h5>{{ p.nombre }}</h5>
+        <p>💰 Q{{ p.precio }}</p>
+
+        {% if p.stock < 5 %}
+        <span class="badge bg-danger">Stock Bajo</span>
+        {% endif %}
+
+        <p>📦 Stock: {{ p.stock }}</p>
+
+        <div class="d-flex justify-content-between">
+            <a href="/editar/{{ p.id }}" class="btn btn-warning btn-sm">Editar</a>
+            <a href="/eliminar/{{ p.id }}" class="btn btn-danger btn-sm"
+               onclick="return confirm('¿Eliminar producto?')">
+               Eliminar
+            </a>
+        </div>
+    </div>
+
+</div>
+</div>
+{% endfor %}
+
+</div>
+
+</div>
 </div>
 
 </body>

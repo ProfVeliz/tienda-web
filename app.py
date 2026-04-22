@@ -5,13 +5,13 @@ import cloudinary
 import cloudinary.uploader
 from flask_sqlalchemy import SQLAlchemy
 
-# Cargar variables .env
+# Cargar variables de entorno
 load_dotenv()
 
 app = Flask(__name__)
 
 # =========================
-# BASE DE DATOS (SQLite)
+# BASE DE DATOS
 # =========================
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tienda.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -44,15 +44,26 @@ with app.app_context():
     db.create_all()
 
 # =========================
-# RUTA PRINCIPAL
+# DASHBOARD
 # =========================
 @app.route("/")
 def index():
     productos = Producto.query.all()
-    return render_template("index.html", productos=productos)
+
+    total_productos = len(productos)
+    stock_bajo = len([p for p in productos if p.stock < 5])
+    total_valor = sum([p.precio * p.stock for p in productos])
+
+    return render_template(
+        "index.html",
+        productos=productos,
+        total_productos=total_productos,
+        stock_bajo=stock_bajo,
+        total_valor=total_valor
+    )
 
 # =========================
-# AGREGAR PRODUCTO
+# AGREGAR
 # =========================
 @app.route("/agregar", methods=["GET", "POST"])
 def agregar():
@@ -83,7 +94,43 @@ def agregar():
     return render_template("agregar.html")
 
 # =========================
-# EJECUTAR APP
+# ELIMINAR
+# =========================
+@app.route("/eliminar/<int:id>")
+def eliminar(id):
+    producto = Producto.query.get(id)
+
+    if producto:
+        db.session.delete(producto)
+        db.session.commit()
+
+    return redirect(url_for("index"))
+
+# =========================
+# EDITAR
+# =========================
+@app.route("/editar/<int:id>", methods=["GET", "POST"])
+def editar(id):
+    producto = Producto.query.get(id)
+
+    if request.method == "POST":
+        producto.nombre = request.form["nombre"]
+        producto.precio = float(request.form["precio"])
+        producto.stock = int(request.form["stock"])
+
+        foto = request.files["foto"]
+
+        if foto:
+            resultado = cloudinary.uploader.upload(foto)
+            producto.imagen = resultado["secure_url"]
+
+        db.session.commit()
+        return redirect(url_for("index"))
+
+    return render_template("editar.html", producto=producto)
+
+# =========================
+# RUN
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
