@@ -11,15 +11,18 @@ body { background:#0f172a; color:white; }
 .sidebar { width:240px; min-height:100vh; background:linear-gradient(#141e30,#243b55); padding:20px;}
 .menu-link {display:block;color:white;padding:10px;border-radius:8px;margin-bottom:5px;text-decoration:none;}
 .menu-link:hover {background:rgba(255,255,255,0.2);}
-.card {border-radius:15px;}
+.card {border-radius:15px; transition:0.3s;}
+.card:hover {transform:scale(1.02);}
 </style>
 </head>
 
 <body>
 <div class="d-flex">
 
+<!-- MENU -->
 <div class="sidebar">
 <h4>🛒 Tienda</h4>
+
 <a href="/" class="menu-link">Dashboard</a>
 <a href="/agregar" class="menu-link">Agregar</a>
 
@@ -29,32 +32,53 @@ body { background:#0f172a; color:white; }
 <a href="/reporte/semana" class="btn btn-primary w-100">📊 Reporte Semana</a>
 </div>
 
+<!-- CONTENIDO -->
 <div class="p-4 w-100">
 
-<h2>Ventas Totales: Q{{ total_ventas }}</h2>
+<h2 class="mb-4">💰 Ventas Totales: Q{{ total_ventas }}</h2>
 
 <div class="row">
 
 {% for p in productos %}
 <div class="col-md-3">
-<div class="card bg-dark p-2 mb-3">
+<div class="card bg-dark p-2 mb-3 shadow
 
+{% if p.stock == 0 %}
+border border-danger
+{% endif %}
+">
+
+<!-- IMAGEN -->
 <img src="{{ p.imagen }}" style="height:200px;object-fit:cover;">
 
-<h5>{{ p.nombre }}</h5>
+<!-- NOMBRE -->
+<h5 class="mt-2">{{ p.nombre }}</h5>
+
+<!-- PRECIO -->
 <p>Q{{ p.precio }}</p>
 
-{% if p.stock < 5 %}
-<span class="badge bg-danger">Stock bajo</span>
+<!-- ESTADO DE STOCK -->
+{% if p.stock == 0 %}
+    <span class="badge bg-secondary">❌ No Disponible</span>
+{% elif p.stock < 5 %}
+    <span class="badge bg-danger">⚠️ Stock Bajo ({{ p.stock }})</span>
+{% else %}
+    <span class="badge bg-success">Disponible ({{ p.stock }})</span>
 {% endif %}
 
-<p>Stock: {{ p.stock }}</p>
+<br><br>
 
+<!-- FORMULARIO DE VENTA -->
+{% if p.stock > 0 %}
 <form action="/vender/{{ p.id }}" method="POST">
-<input type="number" name="cantidad" class="form-control mb-1" placeholder="Cantidad" required>
-<button class="btn btn-success w-100">💰 Vender</button>
+    <input type="number" name="cantidad" class="form-control mb-1" placeholder="Cantidad" min="1" max="{{ p.stock }}" required>
+    <button class="btn btn-success w-100">💰 Vender</button>
 </form>
+{% else %}
+<button class="btn btn-secondary w-100" disabled>Producto agotado</button>
+{% endif %}
 
+<!-- BOTONES -->
 <a href="/editar/{{ p.id }}" class="btn btn-warning w-100 mt-1">Editar</a>
 <a href="/eliminar/{{ p.id }}" class="btn btn-danger w-100 mt-1">Eliminar</a>
 

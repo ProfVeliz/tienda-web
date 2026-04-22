@@ -113,6 +113,9 @@ def agregar():
 def editar(id):
     producto = Producto.query.get(id)
 
+    if not producto:
+        return "Producto no encontrado"
+
     if request.method == "POST":
         producto.nombre = request.form["nombre"]
         producto.precio = float(request.form["precio"])
@@ -135,31 +138,49 @@ def editar(id):
 @app.route("/eliminar/<int:id>")
 def eliminar(id):
     producto = Producto.query.get(id)
+
     if producto:
         db.session.delete(producto)
         db.session.commit()
+
     return redirect(url_for("index"))
 
 # =========================
-# VENDER PRODUCTO
+# VENDER PRODUCTO (MEJORADO)
 # =========================
 @app.route("/vender/<int:id>", methods=["POST"])
 def vender(id):
     producto = Producto.query.get(id)
-    cantidad = int(request.form["cantidad"])
 
-    if producto and producto.stock >= cantidad:
-        producto.stock -= cantidad
+    if not producto:
+        return "❌ Producto no encontrado"
 
-        venta = Venta(
-            producto_id=producto.id,
-            nombre=producto.nombre,
-            cantidad=cantidad,
-            total=producto.precio * cantidad
-        )
+    try:
+        cantidad = int(request.form["cantidad"])
+    except:
+        return "❌ Cantidad inválida"
 
-        db.session.add(venta)
-        db.session.commit()
+    # 🚫 Si no hay stock
+    if producto.stock <= 0:
+        return "❌ Producto agotado"
+
+    # 🚫 Si quieren comprar más de lo disponible
+    if cantidad > producto.stock:
+        return "❌ Stock insuficiente"
+
+    # ✅ Descontar stock
+    producto.stock -= cantidad
+
+    # ✅ Registrar venta
+    venta = Venta(
+        producto_id=producto.id,
+        nombre=producto.nombre,
+        cantidad=cantidad,
+        total=producto.precio * cantidad
+    )
+
+    db.session.add(venta)
+    db.session.commit()
 
     return redirect(url_for("index"))
 
