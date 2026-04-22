@@ -5,15 +5,26 @@ import cloudinary
 import cloudinary.uploader
 from flask_sqlalchemy import SQLAlchemy
 
-# Cargar variables de entorno
+# =========================
+# CONFIG INICIAL
+# =========================
 load_dotenv()
-
 app = Flask(__name__)
 
 # =========================
-# BASE DE DATOS
+# BASE DE DATOS (POSTGRES)
 # =========================
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tienda.db"
+uri = os.getenv("DATABASE_URL")
+
+# Arreglar compatibilidad Render
+if uri and uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+
+# Fallback local (por si pruebas en tu PC)
+if not uri:
+    uri = "sqlite:///tienda.db"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -38,7 +49,7 @@ cloudinary.config(
 )
 
 # =========================
-# CREAR BD
+# CREAR TABLAS
 # =========================
 with app.app_context():
     db.create_all()
@@ -63,7 +74,7 @@ def index():
     )
 
 # =========================
-# AGREGAR
+# AGREGAR PRODUCTO
 # =========================
 @app.route("/agregar", methods=["GET", "POST"])
 def agregar():
