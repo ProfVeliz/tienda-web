@@ -1,28 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for
-import os
-from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
 import cloudinary
 import cloudinary.uploader
-from flask_sqlalchemy import SQLAlchemy
+import os
 
-# =========================
-# CONFIG INICIAL
-# =========================
-load_dotenv()
 app = Flask(__name__)
 
 # =========================
-# BASE DE DATOS
+# BASE DE DATOS (SQLite)
 # =========================
-uri = os.getenv("DATABASE_URL")
-
-if uri and uri.startswith("postgres://"):
-    uri = uri.replace("postgres://", "postgresql://", 1)
-
-if not uri:
-    uri = "sqlite:///tienda.db"
-
-app.config["SQLALCHEMY_DATABASE_URI"] = uri
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tienda.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -38,7 +25,7 @@ class Producto(db.Model):
     imagen = db.Column(db.String(300))
 
 # =========================
-# CLOUDINARY
+# CLOUDINARY (Render usa variables de entorno)
 # =========================
 cloudinary.config(
     cloud_name=os.getenv("CLOUD_NAME"),
@@ -47,29 +34,18 @@ cloudinary.config(
 )
 
 # =========================
-# CREAR TABLAS
+# CREAR BD
 # =========================
 with app.app_context():
     db.create_all()
 
 # =========================
-# DASHBOARD
+# RUTA PRINCIPAL (DASHBOARD)
 # =========================
 @app.route("/")
 def index():
     productos = Producto.query.all()
-
-    total_productos = len(productos)
-    stock_bajo = len([p for p in productos if p.stock < 5])
-    total_valor = sum([p.precio * p.stock for p in productos])
-
-    return render_template(
-        "index.html",
-        productos=productos,
-        total_productos=total_productos,
-        stock_bajo=stock_bajo,
-        total_valor=total_valor
-    )
+    return render_template("index.html", productos=productos)
 
 # =========================
 # AGREGAR PRODUCTO
@@ -80,11 +56,11 @@ def agregar():
         nombre = request.form["nombre"]
         precio = float(request.form["precio"])
         stock = int(request.form["stock"])
+        foto = request.files["foto"]
 
-        foto = request.files.get("foto")
         url_imagen = ""
 
-        if foto and foto.filename != "":
+        if foto:
             resultado = cloudinary.uploader.upload(foto)
             url_imagen = resultado["secure_url"]
 
@@ -103,6 +79,29 @@ def agregar():
     return render_template("agregar.html")
 
 # =========================
+# EDITAR PRODUCTO
+# =========================
+@app.route("/editar/<int:id>", methods=["GET", "POST"])
+def editar(id):
+    producto = Producto.query.get(id)
+
+    if request.method == "POST":
+        producto.nombre = request.form["nombre"]
+        producto.precio = float(request.form["precio"])
+        producto.stock = int(request.form["stock"])
+
+        foto = request.files["foto"]
+
+        if foto:
+            resultado = cloudinary.uploader.upload(foto)
+            producto.imagen = resultado["secure_url"]
+
+        db.session.commit()
+        return redirect(url_for("index"))
+
+    return render_template("editar.html", producto=producto)
+
+# =========================
 # ELIMINAR PRODUCTO
 # =========================
 @app.route("/eliminar/<int:id>")
@@ -116,43 +115,7 @@ def eliminar(id):
     return redirect(url_for("index"))
 
 # =========================
-# EDITAR PRODUCTO COMPLETO
-# =========================
-@app.route("/editar/<int:id>", methods=["GET", "POST"])
-def editar(id):
-    producto = Producto.query.get(id)
-
-    if request.method == "POST":
-        producto.nombre = request.form["nombre"]
-        producto.precio = float(request.form["precio"])
-        producto.stock = int(request.form["stock"])
-
-        foto = request.files.get("foto")
-
-        if foto and foto.filename != "":
-            resultado = cloudinary.uploader.upload(foto)
-            producto.imagen = resultado["secure_url"]
-
-        db.session.commit()
-        return redirect(url_for("index"))
-
-    return render_template("editar.html", producto=producto)
-
-# =========================
-# EDITAR SOLO STOCK (RÁPIDO)
-# =========================
-@app.route("/editar_stock/<int:id>", methods=["POST"])
-def editar_stock(id):
-    producto = Producto.query.get(id)
-
-    if producto:
-        producto.stock = int(request.form["stock"])
-        db.session.commit()
-
-    return redirect(url_for("index"))
-
-# =========================
-# RUN APP
+# EJECUTAR APP
 # =========================
 if __name__ == "__main__":
     app.run(debug=True)
