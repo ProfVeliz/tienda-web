@@ -2,125 +2,67 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Sistema de Ventas</title>
+    <title>Tienda</title>
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Iconos -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-
-    <style>
-        body {
-            background-color: #0f172a;
-            color: white;
-        }
-
-        .sidebar {
-            height: 100vh;
-            background: #020617;
-            padding: 20px;
-        }
-
-        .sidebar a {
-            display: block;
-            color: #94a3b8;
-            padding: 10px;
-            text-decoration: none;
-            border-radius: 8px;
-        }
-
-        .sidebar a:hover {
-            background: #1e293b;
-            color: white;
-        }
-
-        .card-custom {
-            background: #1e293b;
-            border: none;
-            border-radius: 15px;
-        }
-
-        .btn-custom {
-            border-radius: 10px;
-        }
-
-        img {
-            object-fit: cover;
-        }
-    </style>
 </head>
 
-<body>
+<body class="bg-dark text-white">
 
-<div class="container-fluid">
-    <div class="row">
+<div class="d-flex">
 
-        <!-- MENU -->
-        <div class="col-md-2 sidebar">
-            <h4>🛒 Tienda</h4>
-            <a href="/"><i class="bi bi-house"></i> Dashboard</a>
-            <a href="/agregar"><i class="bi bi-plus-circle"></i> Agregar</a>
-            <a href="/reporte_dia"><i class="bi bi-file-earmark"></i> Reporte Día</a>
-            <a href="/reporte_semana"><i class="bi bi-graph-up"></i> Reporte Semana</a>
+    <!-- MENU LATERAL -->
+    <div class="bg-black p-3" style="width: 220px; min-height: 100vh;">
+        <h4>🛒 Tienda</h4>
+        <hr>
+
+        <a href="/" class="d-block text-white mb-2">🏠 Dashboard</a>
+        <a href="/agregar" class="d-block text-white mb-2">➕ Agregar</a>
+    </div>
+
+    <!-- CONTENIDO -->
+    <div class="flex-grow-1 p-4">
+
+        <h2>Dashboard</h2>
+
+        <!-- RESUMEN -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-secondary p-3">
+                    <h5>Total Artículos</h5>
+                    <h2>{{ productos|length }}</h2>
+                </div>
+            </div>
         </div>
 
-        <!-- CONTENIDO -->
-        <div class="col-md-10 p-4">
+        <!-- LISTA DE PRODUCTOS -->
+        <div class="row">
 
-            <h2>Dashboard</h2>
+            {% for p in productos %}
+            <div class="col-md-3">
+                <div class="card bg-secondary text-white mb-4">
 
-            <!-- TARJETAS -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card card-custom p-3">
-                        <h5>Total Artículos</h5>
-                        <h3>{{datos|length}}</h3>
+                    {% if p.imagen %}
+                    <img src="{{ p.imagen }}" class="card-img-top" style="height:200px; object-fit:cover;">
+                    {% else %}
+                    <img src="https://via.placeholder.com/200" class="card-img-top">
+                    {% endif %}
+
+                    <div class="card-body">
+                        <h5>{{ p.nombre }}</h5>
+                        <p>💰 Q{{ p.precio }}</p>
+                        <p>📦 Stock: {{ p.stock }}</p>
                     </div>
-                </div>
 
-                <div class="col-md-3">
-                    <div class="card card-custom p-3">
-                        <h5>Stock Bajo</h5>
-                        <h3>
-                            {{ datos | selectattr(3, 'lt', 3) | list | length }}
-                        </h3>
-                    </div>
                 </div>
             </div>
-
-            <!-- PRODUCTOS -->
-            <div class="row">
-                {% for a in datos %}
-                <div class="col-md-4">
-                    <div class="card card-custom mb-4 shadow">
-
-                        <img src="{{a[4]}}" height="200">
-
-                        <div class="card-body">
-                            <h5>{{a[1]}}</h5>
-                            <p>Q{{a[2]}}</p>
-                            <p>Stock: {{a[3]}}</p>
-
-                            {% if a[3] < 3 %}
-                                <span class="badge bg-danger">Stock Bajo</span>
-                            {% else %}
-                                <span class="badge bg-success">Disponible</span>
-                            {% endif %}
-
-                            <br><br>
-
-                            <a href="/vender/{{a[0]}}" class="btn btn-primary btn-custom">Vender</a>
-                        </div>
-
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+            {% endfor %}
 
         </div>
 
     </div>
+
 </div>
 
 </body>

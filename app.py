@@ -3,52 +3,87 @@ import os
 from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
+from flask_sqlalchemy import SQLAlchemy
 
-# Cargar variables del .env (solo local)
+# Cargar variables .env
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configuración Cloudinary (usa .env o variables de Render)
+# =========================
+# BASE DE DATOS (SQLite)
+# =========================
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tienda.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+
+# =========================
+# MODELO
+# =========================
+class Producto(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100))
+    precio = db.Column(db.Float)
+    stock = db.Column(db.Integer)
+    imagen = db.Column(db.String(300))
+
+# =========================
+# CLOUDINARY
+# =========================
 cloudinary.config(
     cloud_name=os.getenv("CLOUD_NAME"),
     api_key=os.getenv("API_KEY"),
     api_secret=os.getenv("API_SECRET")
 )
 
-# ====== RUTA PRINCIPAL ======
+# =========================
+# CREAR BD
+# =========================
+with app.app_context():
+    db.create_all()
+
+# =========================
+# RUTA PRINCIPAL
+# =========================
 @app.route("/")
 def index():
-    return render_template("index.html")
+    productos = Producto.query.all()
+    return render_template("index.html", productos=productos)
 
-
-# ====== AGREGAR PRODUCTO ======
+# =========================
+# AGREGAR PRODUCTO
+# =========================
 @app.route("/agregar", methods=["GET", "POST"])
 def agregar():
     if request.method == "POST":
         nombre = request.form["nombre"]
-        precio = request.form["precio"]
-        stock = request.form["stock"]
+        precio = float(request.form["precio"])
+        stock = int(request.form["stock"])
         foto = request.files["foto"]
 
-        url_imagen = None
+        url_imagen = ""
 
-        if foto and foto.filename != "":
-            # Subir imagen a Cloudinary
+        if foto:
             resultado = cloudinary.uploader.upload(foto)
             url_imagen = resultado["secure_url"]
 
-        # (Por ahora solo mostramos en consola)
-        print("Nombre:", nombre)
-        print("Precio:", precio)
-        print("Stock:", stock)
-        print("Imagen URL:", url_imagen)
+        nuevo = Producto(
+            nombre=nombre,
+            precio=precio,
+            stock=stock,
+            imagen=url_imagen
+        )
+
+        db.session.add(nuevo)
+        db.session.commit()
 
         return redirect(url_for("index"))
 
     return render_template("agregar.html")
 
-
-# ====== INICIO APP ======
+# =========================
+# EJECUTAR APP
+# =========================
 if __name__ == "__main__":
     app.run(debug=True)
