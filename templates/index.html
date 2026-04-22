@@ -1,161 +1,70 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Tienda Pro</title>
+<meta charset="UTF-8">
+<title>Tienda Pro</title>
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Estilos personalizados -->
-    <style>
-        body {
-            background-color: #0f172a;
-            color: white;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 240px;
-            min-height: 100vh;
-            background: linear-gradient(180deg, #141e30, #243b55);
-            padding: 20px;
-        }
-
-        .menu-link {
-            display: block;
-            color: white;
-            text-decoration: none;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            transition: 0.3s;
-        }
-
-        .menu-link:hover {
-            background-color: rgba(255,255,255,0.2);
-            transform: translateX(5px);
-        }
-
-        /* Cards */
-        .card {
-            border: none;
-            border-radius: 15px;
-        }
-
-        .card img {
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
-        }
-
-        .stock-bajo {
-            color: #ff4d4d;
-            font-weight: bold;
-        }
-
-        .stock-ok {
-            color: #00ff88;
-            font-weight: bold;
-        }
-
-        .btn-custom {
-            border-radius: 8px;
-        }
-    </style>
+<style>
+body { background:#0f172a; color:white; }
+.sidebar { width:240px; min-height:100vh; background:linear-gradient(#141e30,#243b55); padding:20px;}
+.menu-link {display:block;color:white;padding:10px;border-radius:8px;margin-bottom:5px;text-decoration:none;}
+.menu-link:hover {background:rgba(255,255,255,0.2);}
+.card {border-radius:15px;}
+</style>
 </head>
 
 <body>
-
 <div class="d-flex">
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <h4>🛒 Tienda</h4>
-        <hr class="text-white">
+<div class="sidebar">
+<h4>🛒 Tienda</h4>
+<a href="/" class="menu-link">Dashboard</a>
+<a href="/agregar" class="menu-link">Agregar</a>
 
-        <a href="/" class="menu-link">🏠 Dashboard</a>
-        <a href="/agregar" class="menu-link">➕ Agregar</a>
-    </div>
+<hr>
 
-    <!-- CONTENIDO -->
-    <div class="flex-grow-1 p-4">
-
-        <h2 class="mb-4">📊 Dashboard</h2>
-
-        <!-- RESUMEN -->
-        <div class="row mb-4">
-
-            <div class="col-md-4">
-                <div class="card bg-secondary p-3 text-center">
-                    <h5>Total Productos</h5>
-                    <h2>{{ productos|length }}</h2>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card bg-danger p-3 text-center">
-                    <h5>Stock Bajo</h5>
-                    <h2>
-                        {{ productos | selectattr("stock", "lt", 5) | list | length }}
-                    </h2>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- LISTA DE PRODUCTOS -->
-        <div class="row">
-
-            {% for p in productos %}
-            <div class="col-md-3">
-                <div class="card bg-dark text-white mb-4 shadow">
-
-                    <!-- Imagen -->
-                    {% if p.imagen %}
-                    <img src="{{ p.imagen }}" style="height:200px; object-fit:cover;">
-                    {% else %}
-                    <img src="https://via.placeholder.com/200">
-                    {% endif %}
-
-                    <div class="card-body">
-
-                        <h5>{{ p.nombre }}</h5>
-
-                        <p>💰 Q{{ p.precio }}</p>
-
-                        <!-- Estado de stock -->
-                        {% if p.stock < 5 %}
-                            <p class="stock-bajo">⚠ Stock bajo: {{ p.stock }}</p>
-                        {% else %}
-                            <p class="stock-ok">✔ Stock: {{ p.stock }}</p>
-                        {% endif %}
-
-                        <!-- BOTONES -->
-                        <div class="d-flex justify-content-between">
-
-                            <a href="/editar/{{ p.id }}" class="btn btn-warning btn-sm btn-custom">
-                                ✏ Editar
-                            </a>
-
-                            <a href="/eliminar/{{ p.id }}" 
-                               class="btn btn-danger btn-sm btn-custom"
-                               onclick="return confirm('¿Eliminar producto?')">
-                                🗑 Eliminar
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>
-            {% endfor %}
-
-        </div>
-
-    </div>
-
+<a href="/reporte/dia" class="btn btn-info w-100 mb-2">📅 Reporte Día</a>
+<a href="/reporte/semana" class="btn btn-primary w-100">📊 Reporte Semana</a>
 </div>
 
+<div class="p-4 w-100">
+
+<h2>Ventas Totales: Q{{ total_ventas }}</h2>
+
+<div class="row">
+
+{% for p in productos %}
+<div class="col-md-3">
+<div class="card bg-dark p-2 mb-3">
+
+<img src="{{ p.imagen }}" style="height:200px;object-fit:cover;">
+
+<h5>{{ p.nombre }}</h5>
+<p>Q{{ p.precio }}</p>
+
+{% if p.stock < 5 %}
+<span class="badge bg-danger">Stock bajo</span>
+{% endif %}
+
+<p>Stock: {{ p.stock }}</p>
+
+<form action="/vender/{{ p.id }}" method="POST">
+<input type="number" name="cantidad" class="form-control mb-1" placeholder="Cantidad" required>
+<button class="btn btn-success w-100">💰 Vender</button>
+</form>
+
+<a href="/editar/{{ p.id }}" class="btn btn-warning w-100 mt-1">Editar</a>
+<a href="/eliminar/{{ p.id }}" class="btn btn-danger w-100 mt-1">Eliminar</a>
+
+</div>
+</div>
+{% endfor %}
+
+</div>
+</div>
+
+</div>
 </body>
 </html>

@@ -1,33 +1,23 @@
-from flask import Flask, render_template, request, redirect, url_for
-import os
-from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, send_file
+from flask_sqlalchemy import SQLAlchemy
 import cloudinary
 import cloudinary.uploader
-from flask_sqlalchemy import SQLAlchemy
+import os
+import pandas as pd
+from datetime import datetime, timedelta
 
-# =========================
-# CONFIG INICIAL
-# =========================
-load_dotenv()
 app = Flask(__name__)
-
-# =========================
-# VERIFICACIÓN (IMPORTANTE)
-# =========================
-print("DATABASE_URL:", os.getenv("DATABASE_URL"))
 
 # =========================
 # BASE DE DATOS
 # =========================
 uri = os.getenv("DATABASE_URL")
 
-if uri:
-    if uri.startswith("postgres://"):
-        uri = uri.replace("postgres://", "postgresql://", 1)
-else:
-    uri = "sqlite:///tienda.db"
+if uri and uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
 
-print("USANDO BD:", uri)  # 🔥 para confirmar qué base usa
+if not uri:
+    uri = "sqlite:///tienda.db"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -35,7 +25,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 # =========================
-# MODELO
+# MODELOS
 # =========================
 class Producto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,6 +33,16 @@ class Producto(db.Model):
     precio = db.Column(db.Float)
     stock = db.Column(db.Integer)
     imagen = db.Column(db.String(300))
+
+
+class Venta(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    producto_id = db.Column(db.Integer)
+    nombre = db.Column(db.String(100))
+    cantidad = db.Column(db.Integer)
+    total = db.Column(db.Float)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 # =========================
 # CLOUDINARY
@@ -65,10 +65,18 @@ with app.app_context():
 @app.route("/")
 def index():
     productos = Producto.query.all()
-    return render_template("index.html", productos=productos)
+    ventas = Venta.query.all()
+
+    total_ventas = sum([v.total for v in ventas])
+
+    return render_template(
+        "index.html",
+        productos=productos,
+        total_ventas=total_ventas
+    )
 
 # =========================
-# AGREGAR
+# AGREGAR PRODUCTO
 # =========================
 @app.route("/agregar", methods=["GET", "POST"])
 def agregar():
@@ -99,7 +107,7 @@ def agregar():
     return render_template("agregar.html")
 
 # =========================
-# EDITAR
+# EDITAR PRODUCTO
 # =========================
 @app.route("/editar/<int:id>", methods=["GET", "POST"])
 def editar(id):
@@ -127,12 +135,81 @@ def editar(id):
 @app.route("/eliminar/<int:id>")
 def eliminar(id):
     producto = Producto.query.get(id)
-
     if producto:
         db.session.delete(producto)
         db.session.commit()
+    return redirect(url_for("index"))
+
+# =========================
+# VENDER PRODUCTO
+# =========================
+@app.route("/vender/<int:id>", methods=["POST"])
+def vender(id):
+    producto = Producto.query.get(id)
+    cantidad = int(request.form["cantidad"])
+
+    if producto and producto.stock >= cantidad:
+        producto.stock -= cantidad
+
+        venta = Venta(
+            producto_id=producto.id,
+            nombre=producto.nombre,
+            cantidad=cantidad,
+            total=producto.precio * cantidad
+        )
+
+        db.session.add(venta)
+        db.session.commit()
 
     return redirect(url_for("index"))
+
+# =========================
+# REPORTE DIARIO
+# =========================
+@app.route("/reporte/dia")
+def reporte_dia():
+    hoy = datetime.utcnow().date()
+
+    ventas = Venta.query.filter(
+        db.func.date(Venta.fecha) == hoy
+    ).all()
+
+    data = [{
+        "Producto": v.nombre,
+        "Cantidad": v.cantidad,
+        "Total": v.total,
+        "Fecha": v.fecha
+    } for v in ventas]
+
+    df = pd.DataFrame(data)
+    archivo = "reporte_dia.xlsx"
+    df.to_excel(archivo, index=False)
+
+    return send_file(archivo, as_attachment=True)
+
+# =========================
+# REPORTE SEMANAL
+# =========================
+@app.route("/reporte/semana")
+def reporte_semana():
+    hace_7_dias = datetime.utcnow() - timedelta(days=7)
+
+    ventas = Venta.query.filter(
+        Venta.fecha >= hace_7_dias
+    ).all()
+
+    data = [{
+        "Producto": v.nombre,
+        "Cantidad": v.cantidad,
+        "Total": v.total,
+        "Fecha": v.fecha
+    } for v in ventas]
+
+    df = pd.DataFrame(data)
+    archivo = "reporte_semana.xlsx"
+    df.to_excel(archivo, index=False)
+
+    return send_file(archivo, as_attachment=True)
 
 # =========================
 # RUN
